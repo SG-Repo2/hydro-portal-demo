@@ -1,47 +1,75 @@
 import { useState } from 'react';
 import { mockCategories } from '../lib/mockData';
 
-export default function UploadWidget() {
+export default function UploadWidget({ onUploadComplete }) {
   const [file, setFile] = useState(null);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
+      setError('');
     }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file || !category) return;
+    if (!file || !category) {
+      setError('Please select a file and category');
+      return;
+    }
 
     setUploading(true);
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // In a real implementation, we would:
-    // 1. Create a FormData object
-    // 2. Append file, category, and description
-    // 3. Send to backend API
-    console.log('Uploading:', {
-      file: file.name,
-      category,
-      description
-    });
-    
-    // Reset form
-    setFile(null);
-    setCategory('');
-    setDescription('');
-    setUploading(false);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', category);
+      formData.append('description', description);
+      formData.append('title', file.name);
+
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      // Reset form
+      setFile(null);
+      setCategory('');
+      setDescription('');
+      
+      // Clear file input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
+      // Notify parent component
+      if (onUploadComplete) {
+        onUploadComplete(data);
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload document. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Document</h3>
+      <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-gray-900 mb-4">Upload Document</h3>
       
       <form onSubmit={handleUpload} className="space-y-4">
         {/* File Input */}
@@ -49,7 +77,7 @@ export default function UploadWidget() {
           <label className="block text-sm font-medium text-gray-700">
             Document
           </label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors duration-200">
             <div className="space-y-1 text-center">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400"
@@ -66,7 +94,7 @@ export default function UploadWidget() {
                 />
               </svg>
               <div className="flex text-sm text-gray-600">
-                <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark">
+                <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
                   <span>Upload a file</span>
                   <input
                     type="file"
@@ -77,7 +105,7 @@ export default function UploadWidget() {
                 </label>
                 <p className="pl-1">or drag and drop</p>
               </div>
-              <p className="text-xs text-gray-500">PDF, DOC up to 10MB</p>
+              <p className="text-xs text-gray-500">PDF up to 10MB</p>
             </div>
           </div>
           {file && (
@@ -120,18 +148,34 @@ export default function UploadWidget() {
           />
         </div>
 
+        {error && (
+          <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+            ⚠️ {error}
+          </div>
+        )}
+
         {/* Submit Button */}
         <div>
           <button
             type="submit"
             disabled={!file || !category || uploading}
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-200 ${
               !file || !category || uploading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
             }`}
           >
-            {uploading ? 'Uploading...' : 'Upload Document'}
+            {uploading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Uploading...
+              </span>
+            ) : (
+              'Upload Document'
+            )}
           </button>
         </div>
       </form>

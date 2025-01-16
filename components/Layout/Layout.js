@@ -1,76 +1,61 @@
 import { useUser } from '../../lib/UserContext';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 export default function Layout({ children }) {
   const { user, logout } = useUser();
   const router = useRouter();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Documents', href: '/dashboard/documents' },
-    { name: 'Categories', href: '/dashboard/categories' },
-    { name: 'Search', href: '/dashboard/search' },
-  ];
-
-  if (!user) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
+      {/* Navigation */}
+      <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
-              {/* Logo */}
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/dashboard">
-                  <a className="text-primary-dark text-xl font-bold">Hydro Portal</a>
-                </Link>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">
+                  Hydro Portal
+                </h1>
               </div>
-
-              {/* Navigation */}
-              <nav className="hidden md:ml-6 md:flex space-x-8">
-                {navigation.map((item) => (
-                  <Link key={item.name} href={item.href}>
-                    <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      router.pathname === item.href
-                        ? 'border-primary text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    }`}>
-                      {item.name}
-                    </a>
-                  </Link>
-                ))}
-              </nav>
             </div>
-
-            {/* User menu */}
-            <div className="ml-6 flex items-center">
+            
+            {user && (
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 mr-4">
-                  {user.name} ({user.role})
+                <span className="text-sm sm:text-base text-gray-700 mr-4">
+                  Welcome, {user.name}
                 </span>
                 <button
-                  onClick={logout}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  onClick={handleLogout}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Logout
                 </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Main content */}
-      <main>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      {/* Main Content */}
+      <main className="py-6">
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
           {children}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white shadow mt-8">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs sm:text-sm text-gray-500">
+            © 2024 Hydro Portal. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 } 
