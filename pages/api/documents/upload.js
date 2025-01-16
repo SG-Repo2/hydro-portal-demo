@@ -2,7 +2,7 @@ import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadedDocuments } from './list';
+import { generateThumbnail, isPDF } from '../../../lib/pdfUtils';
 
 // Disable the default body parser to handle form data
 export const config = {
@@ -46,6 +46,10 @@ export default async function handler(req, res) {
       throw new Error('No file uploaded');
     }
 
+    if (!fields.category) {
+      throw new Error('Category is required');
+    }
+
     uploadedFile = file;
     const fileId = uuidv4();
     const fileExt = path.extname(file.originalFilename || '');
@@ -55,6 +59,14 @@ export default async function handler(req, res) {
     // Rename the file to use UUID
     fs.renameSync(file.filepath || file.path, newPath);
 
+    // Generate thumbnail if it's a PDF
+    let thumbnailUrl = null;
+    if (await isPDF(newPath)) {
+      thumbnailUrl = await generateThumbnail(newPath, fileId);
+    }
+
+    const category = String(fields.category).toLowerCase();
+    
     // Create document record
     const document = {
       id: fileId,
@@ -67,12 +79,12 @@ export default async function handler(req, res) {
       likes: 0,
       likedBy: [],
       filePath: `/uploads/${newFilename}`,
+      thumbnailUrl: thumbnailUrl || `/images/previews/${category}-preview.png`,
+      tags: JSON.parse(fields.tags || '[]'),
     };
 
-    // Add to uploaded documents
-    uploadedDocuments.push(document);
-
-    res.status(200).json(document);
+    // Return the document data as JSON
+    res.status(200).json({ success: true, document });
   } catch (error) {
     console.error('Upload error:', error);
     // Delete any partially uploaded file

@@ -1,9 +1,4 @@
-import { mockDocuments } from '../../../lib/mockData';
-import fs from 'fs';
-import path from 'path';
-
-// In-memory store for uploaded documents (in a real app, this would be a database)
-let uploadedDocuments = [];
+import { getAllDocuments } from '../../../lib/documentStorage';
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,18 +6,10 @@ export default function handler(req, res) {
   }
 
   try {
-    // Combine mock documents with uploaded documents
-    const allDocuments = [...mockDocuments, ...uploadedDocuments];
-    
-    // Sort by upload date (newest first)
-    allDocuments.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
-
-    res.status(200).json(allDocuments);
+    const documents = getAllDocuments();
+    res.status(200).json(documents);
   } catch (error) {
-    console.error('List error:', error);
-    res.status(500).json({ error: 'Error fetching documents' });
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ error: 'Failed to fetch documents' });
   }
-}
-
-// Export for use in other API routes
-export { uploadedDocuments }; 
+} 

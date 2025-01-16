@@ -101,6 +101,19 @@ export default function DocumentPreview({ document }) {
             <p className="mt-1 text-sm text-gray-500 line-clamp-2">
               {document.description}
             </p>
+            {/* Tags */}
+            {document.tags && document.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {document.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <span className={`ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             hasAccess 

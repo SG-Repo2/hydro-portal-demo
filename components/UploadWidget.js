@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { mockCategories } from '../lib/mockData';
+import TagSelector from './TagSelector';
+import { addDocument } from '../lib/documentStorage';
 
 export default function UploadWidget({ onUploadComplete }) {
   const [file, setFile] = useState(null);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,6 +35,7 @@ export default function UploadWidget({ onUploadComplete }) {
       formData.append('category', category);
       formData.append('description', description);
       formData.append('title', file.name);
+      formData.append('tags', JSON.stringify(selectedTags));
 
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
@@ -44,20 +48,24 @@ export default function UploadWidget({ onUploadComplete }) {
         throw new Error(data.error || 'Upload failed');
       }
 
+      // Add document to localStorage
+      addDocument(data.document);
+
       // Reset form
       setFile(null);
       setCategory('');
       setDescription('');
+      setSelectedTags([]);
       
       // Clear file input
       const fileInput = document.querySelector('input[type="file"]');
       if (fileInput) {
         fileInput.value = '';
       }
-      
+
       // Notify parent component
       if (onUploadComplete) {
-        onUploadComplete(data);
+        onUploadComplete(data.document);
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -145,6 +153,17 @@ export default function UploadWidget({ onUploadComplete }) {
             rows={3}
             className="mt-1 block w-full shadow-sm sm:text-sm focus:ring-primary focus:border-primary border border-gray-300 rounded-md"
             placeholder="Enter document description..."
+          />
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tags
+          </label>
+          <TagSelector
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
           />
         </div>
 
