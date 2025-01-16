@@ -1,4 +1,4 @@
-import formidable from 'formidable';
+import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,11 +23,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let uploadedFile = null;
+
   try {
-    const form = new formidable.IncomingForm({
+    const form = new IncomingForm({
       uploadDir,
       keepExtensions: true,
       maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      multiples: false,
     });
 
     const [fields, files] = await new Promise((resolve, reject) => {
@@ -37,23 +40,25 @@ export default async function handler(req, res) {
       });
     });
 
-    if (!files.file) {
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+    
+    if (!file) {
       throw new Error('No file uploaded');
     }
 
-    const file = files.file;
+    uploadedFile = file;
     const fileId = uuidv4();
     const fileExt = path.extname(file.originalFilename || '');
     const newFilename = `${fileId}${fileExt}`;
     const newPath = path.join(uploadDir, newFilename);
 
     // Rename the file to use UUID
-    fs.renameSync(file.filepath, newPath);
+    fs.renameSync(file.filepath || file.path, newPath);
 
     // Create document record
     const document = {
       id: fileId,
-      title: fields.title || file.originalFilename,
+      title: fields.title || file.originalFilename || file.name,
       category: fields.category,
       description: fields.description || '',
       fileType: fileExt.substring(1),
@@ -71,8 +76,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Upload error:', error);
     // Delete any partially uploaded file
-    if (error.filepath && fs.existsSync(error.filepath)) {
-      fs.unlinkSync(error.filepath);
+    if (uploadedFile && (uploadedFile.filepath || uploadedFile.path) && fs.existsSync(uploadedFile.filepath || uploadedFile.path)) {
+      fs.unlinkSync(uploadedFile.filepath || uploadedFile.path);
     }
     res.status(500).json({ error: error.message || 'Error uploading file' });
   }
